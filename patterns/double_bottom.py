@@ -79,7 +79,7 @@ def _match_lows(
         first: tuple[int, float] | None = None
         for idx, low in reversed(swings[:second_pos]):
             gap = second_idx - idx
-            if gap < config.MIN_BARS_BETWEEN_LOWS:
+            if gap < config.DOUBLE_BOTTOM_MIN_BARS:
                 continue
             if gap > config.MAX_BARS_BETWEEN_LOWS:
                 break

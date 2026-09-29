@@ -1,4 +1,4 @@
-"""Beschafft OHLCV-Marktdaten über ccxt."""
+"""Beschafft OHLCV-Marktdaten über Yahoo Finance und ccxt."""
 
 from __future__ import annotations
 
@@ -102,6 +102,28 @@ class CryptoDataFetcher:
             collected = collected[-limit:]
         return self._to_frame(collected)
 
+    def get_double_bottom_ohlcv(self, symbol: str, timeframe: str | None = None, limit: int = 1000) -> pd.DataFrame:
+        """Lädt die höhere Zeiteinheit für Double Bottoms.
+
+        Zuerst Yahoo Finance. Wenn das fehlschlägt oder zu wenig Kerzen liefert,
+        wird dieselbe Zeiteinheit über die konfigurierte Börse geladen.
+        """
+        timeframe = (timeframe or config.DOUBLE_BOTTOM_TIMEFRAME).strip().lower()
+        if limit < 1:
+            raise ValueError(f"limit muss mindestens 1 sein, nicht {limit}")
+        try:
+            frame = _fetch_yahoo(symbol, timeframe)
+        except Exception as exc:
+            log.warning("Yahoo für %s %s fehlgeschlagen (%s)", symbol, timeframe, exc)
+            frame = pd.DataFrame(columns=OHLCV_COLUMNS)
+        if len(frame) >= 30:
+            log.info("Double Bottom %s %s über Yahoo: %s Kerzen", symbol, timeframe, len(frame))
+            return frame.tail(limit).reset_index(drop=True)
+        log.info("Yahoo lieferte zu wenig Kerzen für %s %s, nutze %s", symbol, timeframe, self.exchange_id)
+        if limit <= 1000:
+            return self.get_ohlcv(symbol, timeframe, limit=limit)
+        return self.get_ohlcv_history(symbol, timeframe, limit=limit)
+
     def _fetch_ohlcv(
         self,
         symbol: str,
@@ -136,3 +158,70 @@ class CryptoDataFetcher:
         for column in ("open", "high", "low", "close", "volume"):
             frame[column] = pd.to_numeric(frame[column], errors="coerce")
         return frame.dropna().reset_index(drop=True)
+
+
+def yahoo_symbol(symbol: str) -> str:
+    """BTC/USDT wird zu BTC-USD, dem Yahoo-Ticker für den Coin."""
+    base, _, quote = symbol.partition("/")
+    if quote.upper() in {"USDT", "USD", "USDC", ""}:
+        return f"{base}-USD"
+    return symbol.replace("/", "-")
+
+
+def frame_from_yahoo_history(hist: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+    """Wandelt eine Yahoo-Historie in das OHLCV-Format des Bots."""
+    if hist is None or hist.empty:
+        return pd.DataFrame(columns=OHLCV_COLUMNS)
+    frame = hist.copy()
+    if isinstance(frame.columns, pd.MultiIndex):
+        frame.columns = frame.columns.get_level_values(0)
+    renamed = {column: str(column).lower() for column in frame.columns}
+    frame = frame.rename(columns=renamed)
+    required = {"open", "high", "low", "close", "volume"}
+    if not required.issubset(frame.columns):
+        raise ValueError("Yahoo-Daten ohne OHLC-Spalten")
+    if timeframe == "4h":
+        frame = (
+            frame.resample("4h", origin="epoch")
+            .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+            .dropna(subset=["open", "high", "low", "close"])
+        )
+    index = frame.index
+    if getattr(index, "tz", None) is None:
+        index = index.tz_localize("UTC")
+    else:
+        index = index.tz_convert("UTC")
+    raw = []
+    for position, stamp in enumerate(index):
+        row = frame.iloc[position]
+        raw.append(
+            [
+                int(stamp.timestamp() * 1000),
+                float(row["open"]),
+                float(row["high"]),
+                float(row["low"]),
+                float(row["close"]),
+                float(row["volume"]),
+            ]
+        )
+    return CryptoDataFetcher._to_frame(raw)
+
+
+def _fetch_yahoo(symbol: str, timeframe: str) -> pd.DataFrame:
+    import yfinance as yf
+
+    timeframe = timeframe.strip().lower()
+    if timeframe == "4h":
+        interval = "1h"
+        period = "730d"
+    elif timeframe in {"1d", "1day"}:
+        interval = "1d"
+        period = "max"
+    elif timeframe in {"1h", "60m"}:
+        interval = "1h"
+        period = "730d"
+    else:
+        raise ValueError(f"Yahoo unterstützt {timeframe} für Double Bottom nicht")
+    history = yf.Ticker(yahoo_symbol(symbol)).history(period=period, interval=interval, auto_adjust=False)
+    normalized = "4h" if timeframe == "4h" else ""
+    return frame_from_yahoo_history(history, normalized)

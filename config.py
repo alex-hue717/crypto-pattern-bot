@@ -53,11 +53,13 @@ TIMEFRAMES = [
 CANDLE_LIMIT = 850
 POLL_INTERVAL_SECONDS = 60
 
-# Schwellen für das Double-Bottom-Muster.
-# Die beiden Tiefs dürfen bis zu 1,0 % auseinanderliegen.
+# Double Bottom nur auf der höheren Zeiteinheit, nicht auf 15m oder 1h.
+# 15 Kerzen auf 4h sind etwa 2,5 Tage Abstand zwischen den Tiefs.
+DOUBLE_BOTTOM_TIMEFRAME = "4h"
+DOUBLE_BOTTOM_MIN_BARS = 15
 DOUBLE_BOTTOM_TOLERANCE = 0.01
 MIN_BARS_BETWEEN_LOWS = 5
-MAX_BARS_BETWEEN_LOWS = 40
+MAX_BARS_BETWEEN_LOWS = 60
 NECKLINE_BREAK_BUFFER = 0.002
 FAILED_BREAK_BUFFER = 0.005
 SWING_LOOKBACK = 3

@@ -47,6 +47,7 @@ class BacktestReport:
     timeframe: str
     candles: int
     trades: list[Trade]
+    pattern_names: list[str] | None = None
 
     @property
     def count(self) -> int:
@@ -107,7 +108,7 @@ class BacktestReport:
 
     def pattern_breakdown(self) -> list[PatternStats]:
         """Trades, Win-Rate und Netto-Prozent je Mustername."""
-        names = [pattern.name for pattern in PATTERNS]
+        names = list(self.pattern_names or [pattern.name for pattern in PATTERNS])
         for trade in self.trades:
             if trade.pattern not in names:
                 names.append(trade.pattern)
@@ -232,6 +233,7 @@ def run_backtest(
         timeframe=timeframe,
         candles=len(candles),
         trades=trades,
+        pattern_names=[pattern.name for pattern in patterns],
     )
 
 
@@ -244,8 +246,8 @@ def _format_profit_factor(value: float | None) -> str:
 
 
 def print_report(report: BacktestReport) -> None:
-    open_until_end = sum(1 for trade in report.trades if trade.reason == "Schluss")
-    names = ", ".join(pattern.name for pattern in PATTERNS)
+    open_until_end = sum(1 for trade in report.trades if str(trade.reason).endswith("Schluss"))
+    names = ", ".join(report.pattern_names or [pattern.name for pattern in PATTERNS])
     print()
     print(f"{report.symbol} {report.timeframe} | Kerzen {report.candles}")
     print(f"Muster: {names}")
@@ -273,6 +275,14 @@ def load_candles(fetcher: CryptoDataFetcher, symbol: str, timeframe: str, limit:
     return candles_from_frame(frame)
 
 
+def load_double_bottom_candles(fetcher: CryptoDataFetcher, symbol: str, limit: int) -> list[list[float]]:
+    timeframe = config.DOUBLE_BOTTOM_TIMEFRAME
+    frame = fetcher.get_double_bottom_ohlcv(symbol, timeframe, limit=limit)
+    if not isinstance(frame, pd.DataFrame):
+        raise RuntimeError(f"Unerwartete Double-Bottom-Daten für {symbol} {timeframe}")
+    return candles_from_frame(frame)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Walk-Forward-Backtest")
     parser.add_argument("--symbol", action="append", help="z. B. BTC/USDT, mehrfach möglich")
@@ -295,8 +305,11 @@ def main() -> None:
     print(
         "Backtest | Börse "
         f"{config.EXCHANGE} | Limit {args.limit} | {warned} | "
-        "eine Position, volles Kapital, ohne Hebel, Gebühr 0,15 % je Trade"
+        "eine Position, volles Kapital, ohne Hebel, Gebühr 0,15 % je Trade | "
+        f"Double Bottom nur {config.DOUBLE_BOTTOM_TIMEFRAME}"
     )
+    regular = [pattern for pattern in PATTERNS if pattern.name != "Double Bottom"]
+    double_bottom = [pattern for pattern in PATTERNS if pattern.name == "Double Bottom"]
     for symbol in symbols:
         for timeframe in timeframes:
             try:
@@ -310,9 +323,27 @@ def main() -> None:
                 print(f"{symbol} {timeframe}: nur {len(candles)} Kerzen, zu wenig für den Start bei {START_INDEX}")
                 continue
             report = run_backtest(
-                candles, PATTERNS, symbol, timeframe, ignore_warned=args.ignore_warned
+                candles, regular, symbol, timeframe, ignore_warned=args.ignore_warned
             )
             print_report(report)
+        higher = config.DOUBLE_BOTTOM_TIMEFRAME
+        try:
+            candles = load_double_bottom_candles(fetcher, symbol, args.limit)
+        except Exception as exc:
+            print()
+            print(f"{symbol} {higher} Double Bottom: Daten fehlgeschlagen ({exc})")
+            continue
+        if len(candles) <= START_INDEX:
+            print()
+            print(
+                f"{symbol} {higher} Double Bottom: nur {len(candles)} Kerzen, "
+                f"zu wenig für den Start bei {START_INDEX}"
+            )
+            continue
+        report = run_backtest(
+            candles, double_bottom, symbol, higher, ignore_warned=args.ignore_warned
+        )
+        print_report(report)
 
 
 if __name__ == "__main__":

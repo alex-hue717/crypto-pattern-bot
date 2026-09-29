@@ -90,11 +90,89 @@ def _notify(symbol: str, pattern_name: str, status: str, detail: str, timeframe:
         log.info("Telegram nicht zugestellt: %s %s %s %s", symbol, timeframe, pattern_name, status)
 
 
+def _scan_patterns(
+    state: StateManager,
+    symbol: str,
+    timeframe: str,
+    candles: list[list[float]],
+    patterns: list,
+) -> None:
+    for pattern in patterns:
+        if config.is_pattern_disabled(symbol, pattern.name):
+            continue
+        signal = pattern.detect(candles, timeframe)
+        if signal is None:
+            log.info("%s %s %s: kein Setup", symbol, timeframe, pattern.name)
+            continue
+        log.info("Signal %s: %s %s %s", signal.status, symbol, timeframe, pattern.name)
+        if (
+            signal.neckline_price is None
+            or signal.stop_loss_price is None
+            or signal.target_price is None
+        ):
+            log.info("%s %s ohne Preisniveaus, übersprungen", symbol, pattern.name)
+            continue
+        reason = strategy.rejection_reason(
+            candles,
+            timeframe,
+            signal.stop_loss_price,
+            signal.target_price,
+            pattern.name,
+        )
+        if reason is not None:
+            log.info(
+                "%s %s %s verworfen: %s",
+                symbol,
+                timeframe,
+                pattern.name,
+                reason,
+            )
+            continue
+
+        active = _matching_active(state, symbol, timeframe, pattern.name)
+        if signal.status == "FORMING":
+            if active or state.has_active_forming_pattern(
+                symbol, timeframe, pattern.name
+            ):
+                log.info("%s %s %s bleibt FORMING", symbol, timeframe, pattern.name)
+                continue
+            pattern_id = state.add_pattern(
+                symbol,
+                timeframe,
+                pattern.name,
+                signal.neckline_price,
+                signal.stop_loss_price,
+                signal.target_price,
+            )
+            log.info("FORMING gespeichert: id=%s", pattern_id)
+            _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
+            continue
+
+        if not active:
+            log.info(
+                "%s %s %s ist %s, kein offenes FORMING",
+                symbol,
+                timeframe,
+                pattern.name,
+                signal.status,
+            )
+            continue
+
+        for row in active:
+            if state.update_status(row["id"], signal.status):
+                log.info("Muster %s -> %s", row["id"], signal.status)
+                _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
+
+
 def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
     log.info("Scan gestartet")
     removed = state.cleanup_old_records()
     if removed:
         log.info("%s alte Muster entfernt", removed)
+
+    regular = [pattern for pattern in PATTERNS if pattern.name != "Double Bottom"]
+    double_bottom = [pattern for pattern in PATTERNS if pattern.name == "Double Bottom"]
+    higher_timeframe = config.DOUBLE_BOTTOM_TIMEFRAME
 
     for symbol in config.SYMBOLS:
         for timeframe in config.TIMEFRAMES:
@@ -103,73 +181,24 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
             except Exception:
                 log.exception("Marktdaten für %s %s fehlgeschlagen", symbol, timeframe)
                 continue
+            _scan_patterns(state, symbol, timeframe, candles_from_frame(frame), regular)
 
-            candles = candles_from_frame(frame)
-            for pattern in PATTERNS:
-                if config.is_pattern_disabled(symbol, pattern.name):
-                    continue
-                signal = pattern.detect(candles, timeframe)
-                if signal is None:
-                    log.info("%s %s %s: kein Setup", symbol, timeframe, pattern.name)
-                    continue
-                log.info("Signal %s: %s %s %s", signal.status, symbol, timeframe, pattern.name)
-                if (
-                    signal.neckline_price is None
-                    or signal.stop_loss_price is None
-                    or signal.target_price is None
-                ):
-                    log.info("%s %s ohne Preisniveaus, übersprungen", symbol, pattern.name)
-                    continue
-                reason = strategy.rejection_reason(
-                    candles,
-                    timeframe,
-                    signal.stop_loss_price,
-                    signal.target_price,
-                    pattern.name,
-                )
-                if reason is not None:
-                    log.info(
-                        "%s %s %s verworfen: %s",
-                        symbol,
-                        timeframe,
-                        pattern.name,
-                        reason,
-                    )
-                    continue
-
-                active = _matching_active(state, symbol, timeframe, pattern.name)
-                if signal.status == "FORMING":
-                    if active or state.has_active_forming_pattern(
-                        symbol, timeframe, pattern.name
-                    ):
-                        log.info("%s %s %s bleibt FORMING", symbol, timeframe, pattern.name)
-                        continue
-                    pattern_id = state.add_pattern(
-                        symbol,
-                        timeframe,
-                        pattern.name,
-                        signal.neckline_price,
-                        signal.stop_loss_price,
-                        signal.target_price,
-                    )
-                    log.info("FORMING gespeichert: id=%s", pattern_id)
-                    _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
-                    continue
-
-                if not active:
-                    log.info(
-                        "%s %s %s ist %s, kein offenes FORMING",
-                        symbol,
-                        timeframe,
-                        pattern.name,
-                        signal.status,
-                    )
-                    continue
-
-                for row in active:
-                    if state.update_status(row["id"], signal.status):
-                        log.info("Muster %s -> %s", row["id"], signal.status)
-                        _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
+        try:
+            frame = fetcher.get_double_bottom_ohlcv(
+                symbol,
+                higher_timeframe,
+                limit=config.CANDLE_LIMIT,
+            )
+        except Exception:
+            log.exception("Double-Bottom-Daten für %s %s fehlgeschlagen", symbol, higher_timeframe)
+            continue
+        _scan_patterns(
+            state,
+            symbol,
+            higher_timeframe,
+            candles_from_frame(frame),
+            double_bottom,
+        )
 
 
 def run_forever(fetcher: CryptoDataFetcher, state: StateManager, sleep=time.sleep) -> None:
