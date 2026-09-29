@@ -60,8 +60,8 @@ python backtest.py --ignore-warned
 ```
 
 Der Backtest zieht je Trade 0,15 % Gebühr ab und zeigt danach die Ergebnisse je Muster.
-`--ignore-warned` lässt Coin/Muster-Kombinationen aus `COIN_PATTERN_RULES` weg.
-Dieselben Kombinationen bekommen im Telegram-Alert einen Fehlausbruch-Hinweis.
+`--ignore-warned` lässt zusätzlich als Hinweis markierte Kombinationen weg.
+Muster aus `disabled_patterns` werden im Live-Bot und im Backtest immer übersprungen.
 
 Im Dauerbetrieb schreibt der Bot nach `bot.log` und in die Konsole. Ein Fehler beendet ihn nicht: er wartet 60 Sekunden und scannt weiter.
 

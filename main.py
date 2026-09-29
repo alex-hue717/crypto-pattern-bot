@@ -105,6 +105,8 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
 
             candles = candles_from_frame(frame)
             for pattern in PATTERNS:
+                if config.is_pattern_disabled(symbol, pattern.name):
+                    continue
                 signal = pattern.detect(candles, timeframe)
                 if signal is None:
                     log.info("%s %s %s: kein Setup", symbol, timeframe, pattern.name)

@@ -35,11 +35,9 @@ SYMBOLS = [
     "BTC/USDT",
     "ETH/USDT",
     "SOL/USDT",
-    "AVAX/USDT",
     "LINK/USDT",
     "NEAR/USDT",
     "FET/USDT",
-    "PEPE/USDT",
     "BOME/USDT",
     "ETHFI/USDT",
     "SEI/USDT",
@@ -88,22 +86,28 @@ MACRO_MIN_SWING_LOWS = 2
 VOLUME_SMA_BARS = 20
 VOLUME_BREAKOUT_FACTOR = 1.3
 
-# Coin-spezifische Hinweise. "warnings" markiert Muster mit historisch vielen Fehlausbrüchen.
+# Gesperrte Muster je Coin. Leere Liste heißt: alle Muster sind erlaubt.
 COIN_PATTERN_RULES = {
-    "BTC/USDT": {
-        "warnings": ["Range Breakout"],  # Oder komplett deaktivieren
-    },
-    "ETH/USDT": {
-        "warnings": ["Range Breakout"],
-    },
-    "SOL/USDT": {
-        "warnings": ["Macro Range"],
-    },
+    "NEAR/USDT": {"disabled_patterns": ["Double Bottom", "Range Breakout"]},
+    "ETHFI/USDT": {"disabled_patterns": ["Double Bottom", "Macro Range"]},
+    "LINK/USDT": {"disabled_patterns": ["Double Bottom"]},
+    "SEI/USDT": {"disabled_patterns": ["Inverse Head and Shoulders"]},
+    "FET/USDT": {"disabled_patterns": ["Range Breakout"]},
+    "BTC/USDT": {"disabled_patterns": ["Inverse Head and Shoulders", "Range Breakout"]},
+    "ETH/USDT": {"disabled_patterns": ["Inverse Head and Shoulders", "Range Breakout", "Double Bottom"]},
+    "SOL/USDT": {"disabled_patterns": ["Macro Range", "Double Bottom"]},
+    "BOME/USDT": {"disabled_patterns": []},
 }
 
 
+def is_pattern_disabled(symbol: str, pattern_name: str) -> bool:
+    """True, wenn dieses Muster für den Coin nicht gehandelt werden soll."""
+    disabled = COIN_PATTERN_RULES.get(symbol, {}).get("disabled_patterns", [])
+    return pattern_name in disabled
+
+
 def has_pattern_warning(symbol: str, pattern_name: str) -> bool:
-    """True, wenn dieses Muster auf dem Coin als riskant markiert ist."""
+    """True, wenn dieses Muster auf dem Coin nur als Hinweis markiert ist."""
     warnings = COIN_PATTERN_RULES.get(symbol, {}).get("warnings", [])
     return pattern_name in warnings
 

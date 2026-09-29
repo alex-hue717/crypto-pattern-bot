@@ -169,6 +169,8 @@ def run_backtest(
         view = _as_closed(candles, index)
         opened = False
         for pattern in patterns:
+            if config.is_pattern_disabled(symbol, pattern.name):
+                continue
             signal = pattern.detect(view, timeframe)
             if signal is None or signal.status != "CONFIRMED":
                 continue
