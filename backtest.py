@@ -18,6 +18,7 @@ from patterns.base_pattern import BasePattern
 
 START_INDEX = 100
 START_EQUITY = 10_000.0
+FEE_PCT = 0.0015
 
 
 @dataclass
@@ -29,6 +30,14 @@ class Trade:
     exit: float
     pnl_pct: float
     reason: str
+
+
+@dataclass
+class PatternStats:
+    name: str
+    trades: int
+    win_rate: float
+    net_pct: float
 
 
 @dataclass
@@ -94,6 +103,22 @@ class BacktestReport:
         if gross_loss == 0:
             return None if gross_win == 0 else float("inf")
         return gross_win / gross_loss
+
+    def pattern_breakdown(self) -> list[PatternStats]:
+        """Trades, Win-Rate und Netto-Prozent je Mustername."""
+        names = [pattern.name for pattern in PATTERNS]
+        for trade in self.trades:
+            if trade.pattern not in names:
+                names.append(trade.pattern)
+        rows: list[PatternStats] = []
+        for name in names:
+            group = [trade for trade in self.trades if trade.pattern == name]
+            count = len(group)
+            wins = sum(1 for trade in group if trade.pnl_pct > 0)
+            win_rate = 100.0 * wins / count if count else 0.0
+            net_pct = sum(trade.pnl_pct for trade in group) * 100
+            rows.append(PatternStats(name=name, trades=count, win_rate=win_rate, net_pct=net_pct))
+        return rows
 
 
 def _as_closed(candles: list[list[float]], index: int) -> list[list[float]]:
@@ -163,7 +188,7 @@ def run_backtest(
                     pattern=pattern.name,
                     entry=entry,
                     exit=exit_price,
-                    pnl_pct=(exit_price - entry) / entry,
+                    pnl_pct=((exit_price - entry) / entry) - FEE_PCT,
                     reason=reason,
                 )
             )
@@ -203,6 +228,12 @@ def print_report(report: BacktestReport) -> None:
         print(f"Davon zum letzten Kurs geschlossen: {open_until_end}")
     if report.count == 0:
         print("Kein bestätigtes Signal im Zeitraum.")
+    print()
+    print(f"{'Muster':<30} {'Trades':>6} {'Win-Rate':>10} {'Gewinn/Verlust':>16}")
+    for row in report.pattern_breakdown():
+        print(
+            f"{row.name:<30} {row.trades:>6} {row.win_rate:>9.2f} % {row.net_pct:>+14.2f} %"
+        )
 
 
 def load_candles(fetcher: CryptoDataFetcher, symbol: str, timeframe: str, limit: int) -> list[list[float]]:
@@ -228,7 +259,7 @@ def main() -> None:
     print(
         "Backtest | Börse "
         f"{config.EXCHANGE} | Limit {args.limit} | "
-        "eine Position, volles Kapital, ohne Hebel und ohne Gebühren"
+        "eine Position, volles Kapital, ohne Hebel, Gebühr 0,15 % je Trade"
     )
     for symbol in symbols:
         for timeframe in timeframes:
