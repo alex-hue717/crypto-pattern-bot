@@ -42,7 +42,7 @@ TIMEFRAMES = [
     "1h",
 ]
 
-CANDLE_LIMIT = 100
+CANDLE_LIMIT = 250
 POLL_INTERVAL_SECONDS = 60
 
 # Schwellen für das Double-Bottom-Muster.
@@ -64,5 +64,13 @@ RANGE_BARS = 30
 RANGE_MAX_SPAN_PERCENT = 6.0
 RANGE_UPPER_FRACTION = 0.20
 RANGE_FAIL_LOOKBACK = 3
+
+# Makro-Zone über die letzten geschlossenen Kerzen.
+MACRO_BARS = 200
+MACRO_HIGH_PERCENTILE = 95
+MACRO_LOW_PERCENTILE = 5
+MACRO_PROXIMITY = 0.015
+MACRO_BREAKOUT = 0.003
+MACRO_STOP_INSIDE = 0.02
 
 DB_PATH = Path(__file__).resolve().parent / "patterns.db"

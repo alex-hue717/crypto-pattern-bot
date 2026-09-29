@@ -13,6 +13,7 @@ from data_fetcher import CryptoDataFetcher
 from patterns.double_bottom import DoubleBottom
 from patterns.ihns import InverseHeadAndShoulders
 from patterns.range_breakout import RangeBreakout
+from patterns.macro_range import MacroRange
 from state_manager import StateManager
 from telegram_bot import format_alert, send_message
 
@@ -22,7 +23,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("crypto-pattern-bot")
 
-PATTERNS = [DoubleBottom(), InverseHeadAndShoulders(), RangeBreakout()]
+PATTERNS = [DoubleBottom(), InverseHeadAndShoulders(), RangeBreakout(), MacroRange()]
 
 
 def candles_from_frame(frame: pd.DataFrame) -> list[list[float]]:
