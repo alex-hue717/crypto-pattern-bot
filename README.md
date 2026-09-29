@@ -67,6 +67,12 @@ Im Dauerbetrieb schreibt der Bot nach `bot.log` und in die Konsole. Ein Fehler b
 
 Ohne Token läuft der Bot trotzdem: Alerts erscheinen dann nur in der Konsole.
 
+## Geplanter Scan
+
+`.github/workflows/scheduled_scan.yml` startet alle 4 Stunden (UTC) einen Durchlauf mit `python main.py --once`.
+Dafür im Repository unter Settings → Secrets die Werte `TELEGRAM_TOKEN` und `TELEGRAM_CHAT_ID` anlegen.
+Der Lauf hat keine gespeicherte `patterns.db`, deshalb kann ein FORMING-Hinweis beim nächsten Cron erneut kommen.
+
 ## Neues Muster
 
 Neue Datei unter `patterns/`, Klasse von `BasePattern` ableiten, `detect()` implementieren
