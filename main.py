@@ -125,6 +125,7 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
                     timeframe,
                     signal.stop_loss_price,
                     signal.target_price,
+                    pattern.name,
                 )
                 if reason is not None:
                     log.info(

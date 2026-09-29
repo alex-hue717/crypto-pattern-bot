@@ -84,9 +84,12 @@ MACRO_MIN_TIMEFRAME_MINUTES = 60
 MACRO_MIN_SWING_HIGHS = 2
 MACRO_MIN_SWING_LOWS = 2
 
-# Kaufsignale: Trend, Mindest-Chance-Risiko und Volumen. Keine Coin-Sperren.
+# Kaufsignale: Trendfolge bleibt am EMA 200, Umkehr nutzt EMA 20 oder RSI.
 EMA_PERIOD = 200
+EMA_FAST_PERIOD = 20
 EMA_TIMEFRAME_MINUTES = 60
+RSI_PERIOD = 14
+RSI_MIN = 45
 MIN_RISK_REWARD = 1.5
 VOLUME_SMA_BARS = 20
 VOLUME_BREAKOUT_FACTOR = 1.2

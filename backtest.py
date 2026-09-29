@@ -184,7 +184,7 @@ def run_backtest(
             target = float(signal.target_price)
             if not (stop < entry < target):
                 continue
-            if not strategy.signal_allowed(view, timeframe, stop, target):
+            if not strategy.signal_allowed(view, timeframe, stop, target, pattern.name):
                 continue
             exit_price, reason, exit_index = _manage_trade(
                 candles, index, stop, target
