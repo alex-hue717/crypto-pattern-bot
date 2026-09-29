@@ -56,9 +56,66 @@ class CryptoDataFetcher:
         """
         if limit < 1:
             raise ValueError(f"limit muss mindestens 1 sein, nicht {limit}")
+        raw = self._fetch_ohlcv(symbol, timeframe, limit=limit)
+        return self._to_frame(raw)
+
+    def get_ohlcv_history(self, symbol: str, timeframe: str, limit: int = 1000) -> pd.DataFrame:
+        """Lädt längere Historie über mehrere ccxt-Abrufe.
+
+        Ein einzelner Request liefert je nach Börse höchstens etwa 1000 Kerzen.
+        Der Abruf startet am Beginn des Zeitraums und läuft Kerze für Kerze nach vorn,
+        bis ``limit`` Kerzen beisammen sind oder die Börse nichts mehr liefert.
+        """
+        if limit < 1:
+            raise ValueError(f"limit muss mindestens 1 sein, nicht {limit}")
 
         try:
-            raw = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+            timeframe_ms = int(self.exchange.parse_timeframe(timeframe) * 1000)
+        except Exception as exc:
+            raise ValueError(f"Unbekannter Timeframe: {timeframe}") from exc
+
+        now_ms = int(self.exchange.milliseconds())
+        since = now_ms - limit * timeframe_ms
+        collected: list[list] = []
+        seen: set[int] = set()
+        page_size = 1000
+
+        while len(collected) < limit:
+            batch = min(page_size, limit - len(collected))
+            raw = self._fetch_ohlcv(symbol, timeframe, limit=batch, since=since)
+            if not raw:
+                break
+
+            fresh = [row for row in raw if int(row[0]) not in seen]
+            for row in fresh:
+                seen.add(int(row[0]))
+            collected.extend(fresh)
+
+            last_ts = int(raw[-1][0])
+            next_since = last_ts + timeframe_ms
+            if not fresh or next_since <= since or last_ts >= now_ms - timeframe_ms:
+                break
+            since = next_since
+
+        collected.sort(key=lambda row: int(row[0]))
+        if len(collected) > limit:
+            collected = collected[-limit:]
+        return self._to_frame(collected)
+
+    def _fetch_ohlcv(
+        self,
+        symbol: str,
+        timeframe: str,
+        limit: int,
+        since: int | None = None,
+    ) -> list[list]:
+        try:
+            return self.exchange.fetch_ohlcv(
+                symbol,
+                timeframe=timeframe,
+                since=since,
+                limit=limit,
+            )
         except ccxt.BaseError as exc:
             log.error("OHLCV %s %s fehlgeschlagen: %s", symbol, timeframe, exc)
             raise RuntimeError(
@@ -70,10 +127,11 @@ class CryptoDataFetcher:
                 f"Unerwarteter Fehler beim Laden von {symbol} {timeframe}"
             ) from exc
 
+    @staticmethod
+    def _to_frame(raw: list[list]) -> pd.DataFrame:
         frame = pd.DataFrame(raw, columns=OHLCV_COLUMNS)
         if frame.empty:
             return frame
-
         frame["timestamp"] = pd.to_datetime(frame["timestamp"], unit="ms", utc=True)
         for column in ("open", "high", "low", "close", "volume"):
             frame[column] = pd.to_numeric(frame[column], errors="coerce")

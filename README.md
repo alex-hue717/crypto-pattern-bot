@@ -20,6 +20,7 @@ crypto-pattern-bot/
 ├── state_manager.py     # FORMING -> CONFIRMED / FAILED (SQLite, patterns.db)
 ├── telegram_bot.py      # Formatierte Telegram-Nachrichten
 ├── main.py               # Haupt-Loop
+├── backtest.py           # Walk-Forward-Backtest, keine echten Orders
 └── patterns/
     ├── __init__.py
     ├── base_pattern.py   # Basisklasse für alle Muster
@@ -51,6 +52,7 @@ Coins und Timeframes stehen in `config.py` (`SYMBOLS`, `TIMEFRAMES`).
 python state_manager.py   # legt ein Test-Muster an und setzt es auf CONFIRMED
 python main.py --once     # ein Durchlauf
 python main.py            # Loop, Strg+C beendet
+python backtest.py --symbol BTC/USDT --timeframe 1h --limit 1000
 ```
 
 Ohne Token läuft der Bot trotzdem: Alerts erscheinen dann nur in der Konsole.
