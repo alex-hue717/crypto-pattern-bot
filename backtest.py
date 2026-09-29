@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 import config
+import strategy
 from data_fetcher import CryptoDataFetcher
 from main import PATTERNS, candles_from_frame
 from patterns.base_pattern import BasePattern
@@ -182,6 +183,8 @@ def run_backtest(
             stop = float(signal.stop_loss_price)
             target = float(signal.target_price)
             if not (stop < entry < target):
+                continue
+            if not strategy.signal_allowed(view, timeframe, stop, target):
                 continue
             exit_price, reason, exit_index = _manage_trade(
                 candles, index, stop, target

@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 import config
+import strategy
 from data_fetcher import CryptoDataFetcher
 from patterns.double_bottom import DoubleBottom
 from patterns.ihns import InverseHeadAndShoulders
@@ -118,6 +119,21 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
                     or signal.target_price is None
                 ):
                     log.info("%s %s ohne Preisniveaus, übersprungen", symbol, pattern.name)
+                    continue
+                reason = strategy.rejection_reason(
+                    candles,
+                    timeframe,
+                    signal.stop_loss_price,
+                    signal.target_price,
+                )
+                if reason is not None:
+                    log.info(
+                        "%s %s %s verworfen: %s",
+                        symbol,
+                        timeframe,
+                        pattern.name,
+                        reason,
+                    )
                     continue
 
                 active = _matching_active(state, symbol, timeframe, pattern.name)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import config
+import strategy
 from patterns.base_pattern import BasePattern, Candle, PatternSignal
 
 
@@ -95,13 +96,5 @@ class RangeBreakout(BasePattern):
 
 
 def _volume_confirms(candles: list[Candle], signal_index: int) -> tuple[bool, float, float]:
-    """True, wenn die Ausbruchskerze mindestens das 1,3-fache des 20er-Volumenschnitts hat."""
-    bars = config.VOLUME_SMA_BARS
-    if signal_index < bars:
-        return False, 0.0, 0.0
-    current = float(candles[signal_index][5])
-    sample = [float(candles[index][5]) for index in range(signal_index - bars, signal_index)]
-    average = sum(sample) / bars
-    if average <= 0:
-        return False, current, average
-    return current >= average * config.VOLUME_BREAKOUT_FACTOR, current, average
+    """True, wenn die Ausbruchskerze strikt über dem 1,2-fachen des 20er-Volumenschnitts liegt."""
+    return strategy.volume_confirms(candles, signal_index)

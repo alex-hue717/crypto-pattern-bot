@@ -35,9 +35,11 @@ SYMBOLS = [
     "BTC/USDT",
     "ETH/USDT",
     "SOL/USDT",
+    "AVAX/USDT",
     "LINK/USDT",
     "NEAR/USDT",
     "FET/USDT",
+    "PEPE/USDT",
     "BOME/USDT",
     "ETHFI/USDT",
     "SEI/USDT",
@@ -48,7 +50,7 @@ TIMEFRAMES = [
     "1h",
 ]
 
-CANDLE_LIMIT = 250
+CANDLE_LIMIT = 850
 POLL_INTERVAL_SECONDS = 60
 
 # Schwellen für das Double-Bottom-Muster.
@@ -82,21 +84,26 @@ MACRO_MIN_TIMEFRAME_MINUTES = 60
 MACRO_MIN_SWING_HIGHS = 2
 MACRO_MIN_SWING_LOWS = 2
 
-# Ausbruch nur mit überdurchschnittlichem Volumen bestätigen.
+# Kaufsignale: Trend, Mindest-Chance-Risiko und Volumen. Keine Coin-Sperren.
+EMA_PERIOD = 200
+EMA_TIMEFRAME_MINUTES = 60
+MIN_RISK_REWARD = 1.5
 VOLUME_SMA_BARS = 20
-VOLUME_BREAKOUT_FACTOR = 1.3
+VOLUME_BREAKOUT_FACTOR = 1.2
 
-# Gesperrte Muster je Coin. Leere Liste heißt: alle Muster sind erlaubt.
+# Alle Muster bleiben je Coin erlaubt. Die Qualität steuert strategy.py.
 COIN_PATTERN_RULES = {
-    "NEAR/USDT": {"disabled_patterns": ["Double Bottom", "Range Breakout"]},
-    "ETHFI/USDT": {"disabled_patterns": ["Double Bottom", "Macro Range"]},
-    "LINK/USDT": {"disabled_patterns": ["Double Bottom"]},
-    "SEI/USDT": {"disabled_patterns": ["Inverse Head and Shoulders"]},
-    "FET/USDT": {"disabled_patterns": ["Range Breakout"]},
-    "BTC/USDT": {"disabled_patterns": ["Inverse Head and Shoulders", "Range Breakout"]},
-    "ETH/USDT": {"disabled_patterns": ["Inverse Head and Shoulders", "Range Breakout", "Double Bottom"]},
-    "SOL/USDT": {"disabled_patterns": ["Macro Range", "Double Bottom"]},
+    "BTC/USDT": {"disabled_patterns": []},
+    "ETH/USDT": {"disabled_patterns": []},
+    "SOL/USDT": {"disabled_patterns": []},
+    "AVAX/USDT": {"disabled_patterns": []},
+    "LINK/USDT": {"disabled_patterns": []},
+    "NEAR/USDT": {"disabled_patterns": []},
+    "FET/USDT": {"disabled_patterns": []},
+    "PEPE/USDT": {"disabled_patterns": []},
     "BOME/USDT": {"disabled_patterns": []},
+    "ETHFI/USDT": {"disabled_patterns": []},
+    "SEI/USDT": {"disabled_patterns": []},
 }
 
 
