@@ -6,8 +6,10 @@ import argparse
 import logging
 import time
 
+import pandas as pd
+
 import config
-from data_fetcher import create_exchange, fetch_ohlcv
+from data_fetcher import CryptoDataFetcher
 from patterns.double_bottom import DoubleBottom
 from state_manager import StateManager
 from telegram_bot import format_alert, send_message
@@ -21,6 +23,26 @@ log = logging.getLogger("crypto-pattern-bot")
 PATTERNS = [DoubleBottom()]
 
 
+def candles_from_frame(frame: pd.DataFrame) -> list[list[float]]:
+    """Wandelt das OHLCV-DataFrame in die Listenform der Mustererkennung."""
+    if frame.empty:
+        return []
+    stamps = frame["timestamp"].astype("int64").to_numpy() // 1_000_000
+    candles: list[list[float]] = []
+    for index, row in enumerate(frame.itertuples(index=False)):
+        candles.append(
+            [
+                int(stamps[index]),
+                float(row.open),
+                float(row.high),
+                float(row.low),
+                float(row.close),
+                float(row.volume),
+            ]
+        )
+    return candles
+
+
 def should_notify(
     previous_status: str | None,
     previous_fingerprint: str | None,
@@ -32,42 +54,45 @@ def should_notify(
     return previous_fingerprint != fingerprint and status == "FORMING"
 
 
-def run_once(exchange, state: StateManager) -> None:
+def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
     for symbol in config.SYMBOLS:
-        try:
-            candles = fetch_ohlcv(exchange, symbol)
-        except Exception:
-            log.exception("Marktdaten für %s fehlgeschlagen", symbol)
-            continue
-
-        for pattern in PATTERNS:
-            signal = pattern.detect(candles)
-            if signal is None:
-                log.info("%s %s: kein Setup", symbol, pattern.name)
+        for timeframe in config.TIMEFRAMES:
+            try:
+                frame = fetcher.get_ohlcv(symbol, timeframe, limit=config.CANDLE_LIMIT)
+            except Exception:
+                log.exception("Marktdaten für %s %s fehlgeschlagen", symbol, timeframe)
                 continue
 
-            previous, _current = state.transition(
-                symbol=symbol,
-                pattern=pattern.name,
-                status=signal.status,
-                fingerprint=signal.fingerprint,
-                detail=signal.detail,
-            )
-            prev_status = previous.status if previous else None
-            prev_fp = previous.fingerprint if previous else None
-            if not should_notify(prev_status, prev_fp, signal.status, signal.fingerprint):
-                log.info("%s %s bleibt %s", symbol, pattern.name, signal.status)
-                continue
+            candles = candles_from_frame(frame)
+            for pattern in PATTERNS:
+                signal = pattern.detect(candles)
+                pattern_key = f"{pattern.name} {timeframe}"
+                if signal is None:
+                    log.info("%s %s: kein Setup", symbol, pattern_key)
+                    continue
 
-            text = format_alert(
-                symbol,
-                pattern.name,
-                signal.status,
-                signal.detail,
-                config.TIMEFRAME,
-            )
-            log.info("Alert:\n%s", text)
-            send_message(text)
+                previous, _current = state.transition(
+                    symbol=symbol,
+                    pattern=pattern_key,
+                    status=signal.status,
+                    fingerprint=signal.fingerprint,
+                    detail=signal.detail,
+                )
+                prev_status = previous.status if previous else None
+                prev_fp = previous.fingerprint if previous else None
+                if not should_notify(prev_status, prev_fp, signal.status, signal.fingerprint):
+                    log.info("%s %s bleibt %s", symbol, pattern_key, signal.status)
+                    continue
+
+                text = format_alert(
+                    symbol,
+                    pattern.name,
+                    signal.status,
+                    signal.detail,
+                    timeframe,
+                )
+                log.info("Alert:\n%s", text)
+                send_message(text)
 
 
 def main() -> None:
@@ -82,17 +107,17 @@ def main() -> None:
     log.info(
         "Starte Bot | Börse=%s | TF=%s | Coins=%s",
         config.EXCHANGE,
-        config.TIMEFRAME,
+        ", ".join(config.TIMEFRAMES),
         ", ".join(config.SYMBOLS),
     )
-    exchange = create_exchange()
+    fetcher = CryptoDataFetcher()
     state = StateManager(config.DB_PATH)
     try:
         if args.once:
-            run_once(exchange, state)
+            run_once(fetcher, state)
             return
         while True:
-            run_once(exchange, state)
+            run_once(fetcher, state)
             time.sleep(config.POLL_INTERVAL_SECONDS)
     except KeyboardInterrupt:
         log.info("Bot gestoppt.")

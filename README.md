@@ -3,8 +3,8 @@
 Lokaler Bot, der Krypto-Charts auf ein Double Bottom prüft und den Status
 `FORMING` → `CONFIRMED` / `FAILED` per Telegram meldet.
 
-Marktdaten kommen über [CCXT](https://github.com/ccxt/ccxt) (standardmäßig Binance, nur lesen).
-Es werden keine Orders gesendet.
+Marktdaten kommen über [CCXT](https://github.com/ccxt/ccxt) (standardmäßig Binance, nur lesen)
+als Pandas-DataFrame. Es werden keine Orders gesendet.
 
 ## Ordnerstruktur
 
@@ -14,8 +14,8 @@ crypto-pattern-bot/
 ├── .env.example         # Vorlage für .env
 ├── .gitignore
 ├── requirements.txt
-├── config.py            # Coins, Timeframe, Schwellenwerte
-├── data_fetcher.py      # Marktdaten via CCXT
+├── config.py            # Tokens aus .env, Coins, Timeframes
+├── data_fetcher.py      # CryptoDataFetcher.get_ohlcv -> DataFrame
 ├── state_manager.py     # FORMING -> CONFIRMED / FAILED (SQLite, lokal)
 ├── telegram_bot.py      # Formatierte Telegram-Nachrichten
 ├── main.py               # Haupt-Loop
@@ -38,11 +38,11 @@ cp .env.example .env        # Windows: copy .env.example .env
 
 In `.env` eintragen:
 
-- `TELEGRAM_BOT_TOKEN` — von [@BotFather](https://t.me/BotFather)
+- `TELEGRAM_TOKEN` — von [@BotFather](https://t.me/BotFather)
 - `TELEGRAM_CHAT_ID` — deine Chat-ID (z.B. über [@userinfobot](https://t.me/userinfobot))
 - `EXCHANGE` — optional, Standard `binance`
 
-Coins, Timeframe und Schwellen stehen in `config.py`.
+Coins und Timeframes stehen in `config.py` (`SYMBOLS`, `TIMEFRAMES`).
 
 ```bash
 python main.py --once   # ein Durchlauf

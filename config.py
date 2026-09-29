@@ -1,4 +1,8 @@
-"""Einstellungen (Coins, Timeframes, Schwellenwerte)."""
+"""Liest die Projekt-Einstellungen.
+
+Tokens und die Börse kommen aus der ``.env``-Datei (python-dotenv).
+Handelspaare und Timeframes sind hier als Listen definiert.
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,23 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-# ccxt-Börsen-ID, z.B. binance, bybit, kraken
-EXCHANGE = os.getenv("EXCHANGE", "binance")
+
+def _env(name: str, fallback_name: str = "") -> str:
+    """Liest eine Umgebungsvariable, optional mit altem Namen als Fallback."""
+    value = os.getenv(name, "").strip()
+    if value:
+        return value
+    if fallback_name:
+        return os.getenv(fallback_name, "").strip()
+    return ""
+
+
+# Telegram. TELEGRAM_BOT_TOKEN bleibt gültig, falls die lokale .env den alten Namen hat.
+TELEGRAM_TOKEN = _env("TELEGRAM_TOKEN", "TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = _env("TELEGRAM_CHAT_ID")
+
+# ccxt-Börsen-ID, z. B. binance, bybit, kraken.
+EXCHANGE = os.getenv("EXCHANGE", "binance").strip() or "binance"
 
 SYMBOLS = [
     "BTC/USDT",
@@ -18,19 +37,20 @@ SYMBOLS = [
     "SOL/USDT",
 ]
 
-TIMEFRAME = "1h"
-CANDLE_LIMIT = 200
+TIMEFRAMES = [
+    "15m",
+    "1h",
+]
+
+CANDLE_LIMIT = 100
 POLL_INTERVAL_SECONDS = 60
 
-# Double Bottom
-DOUBLE_BOTTOM_TOLERANCE = 0.015  # max. relativer Abstand der beiden Tiefs
+# Schwellen für das Double-Bottom-Muster.
+DOUBLE_BOTTOM_TOLERANCE = 0.015
 MIN_BARS_BETWEEN_LOWS = 5
 MAX_BARS_BETWEEN_LOWS = 40
-NECKLINE_BREAK_BUFFER = 0.002  # Schluss so weit über der Neckline = CONFIRMED
-FAILED_BREAK_BUFFER = 0.005  # Schluss so weit unter dem tieferen Tief = FAILED
+NECKLINE_BREAK_BUFFER = 0.002
+FAILED_BREAK_BUFFER = 0.005
 SWING_LOOKBACK = 3
-
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 DB_PATH = Path(__file__).resolve().parent / "data" / "state.db"

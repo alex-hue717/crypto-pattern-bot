@@ -34,7 +34,7 @@ def format_alert(
 
 
 def send_message(text: str) -> bool:
-    token = config.TELEGRAM_BOT_TOKEN.strip()
+    token = config.TELEGRAM_TOKEN.strip()
     chat_id = config.TELEGRAM_CHAT_ID.strip()
     if not token or not chat_id:
         log.warning("Telegram nicht konfiguriert. Nachricht nur lokal:\n%s", text)
