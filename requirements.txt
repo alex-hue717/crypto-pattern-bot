@@ -1,2 +1,6 @@
-ccxt>=4.4.0
-python-dotenv>=1.0.1
+ccxt
+pandas
+numpy
+scipy
+python-telegram-bot
+python-dotenv
