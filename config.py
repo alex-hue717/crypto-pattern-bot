@@ -59,4 +59,10 @@ IHNS_MIN_BARS = 5
 IHNS_MAX_BARS = 30
 IHNS_MIN_HEAD_DEPTH = 0.015
 
+# Enge Range und Ausbruch.
+RANGE_BARS = 30
+RANGE_MAX_SPAN_PERCENT = 6.0
+RANGE_UPPER_FRACTION = 0.20
+RANGE_FAIL_LOOKBACK = 3
+
 DB_PATH = Path(__file__).resolve().parent / "patterns.db"

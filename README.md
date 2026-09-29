@@ -1,8 +1,8 @@
 # crypto-pattern-bot
 
-Lokaler Bot, der Krypto-Charts auf Double Bottom und eine invertierte
-Kopf-Schulter prüft und den Status `FORMING` → `CONFIRMED` / `FAILED`
-per Telegram meldet.
+Lokaler Bot, der Krypto-Charts auf Double Bottom, eine invertierte
+Kopf-Schulter und einen engen Range-Ausbruch prüft. Der Status läuft
+`FORMING` → `CONFIRMED` / `FAILED` und wird per Telegram gemeldet.
 
 Marktdaten kommen über [CCXT](https://github.com/ccxt/ccxt) (standardmäßig Binance, nur lesen)
 als Pandas-DataFrame. Es werden keine Orders gesendet.
@@ -24,7 +24,8 @@ crypto-pattern-bot/
     ├── __init__.py
     ├── base_pattern.py   # Basisklasse für alle Muster
     ├── double_bottom.py  # Erstes Muster
-    └── ihns.py           # Inverse Head and Shoulders
+    ├── ihns.py           # Inverse Head and Shoulders
+    └── range_breakout.py # Enger Range-Ausbruch
 ```
 
 `patterns.db` entsteht beim ersten Lauf und ist per `.gitignore` ausgeschlossen.
