@@ -159,6 +159,7 @@ def run_backtest(
     patterns: list[BasePattern],
     symbol: str,
     timeframe: str,
+    ignore_warned: bool = False,
 ) -> BacktestReport:
     """Geht von Kerze 100 bis zum Ende und handelt bestätigte Signale nacheinander."""
     trades: list[Trade] = []
@@ -170,6 +171,8 @@ def run_backtest(
         for pattern in patterns:
             signal = pattern.detect(view, timeframe)
             if signal is None or signal.status != "CONFIRMED":
+                continue
+            if ignore_warned and config.has_pattern_warning(symbol, pattern.name):
                 continue
             if signal.stop_loss_price is None or signal.target_price is None:
                 continue
@@ -248,6 +251,11 @@ def main() -> None:
     parser.add_argument("--symbol", action="append", help="z. B. BTC/USDT, mehrfach möglich")
     parser.add_argument("--timeframe", action="append", help="z. B. 1h, mehrfach möglich")
     parser.add_argument("--limit", type=int, default=1000, help="Anzahl historischer Kerzen")
+    parser.add_argument(
+        "--ignore-warned",
+        action="store_true",
+        help="Überspringt Coin/Muster-Kombinationen aus COIN_PATTERN_RULES",
+    )
     args = parser.parse_args()
 
     symbols = args.symbol or list(config.SYMBOLS)
@@ -256,9 +264,10 @@ def main() -> None:
         raise SystemExit(f"--limit muss mindestens {START_INDEX + 2} sein")
 
     fetcher = CryptoDataFetcher()
+    warned = "Warn-Muster aus" if args.ignore_warned else "Warn-Muster an"
     print(
         "Backtest | Börse "
-        f"{config.EXCHANGE} | Limit {args.limit} | "
+        f"{config.EXCHANGE} | Limit {args.limit} | {warned} | "
         "eine Position, volles Kapital, ohne Hebel, Gebühr 0,15 % je Trade"
     )
     for symbol in symbols:
@@ -273,7 +282,9 @@ def main() -> None:
                 print()
                 print(f"{symbol} {timeframe}: nur {len(candles)} Kerzen, zu wenig für den Start bei {START_INDEX}")
                 continue
-            report = run_backtest(candles, PATTERNS, symbol, timeframe)
+            report = run_backtest(
+                candles, PATTERNS, symbol, timeframe, ignore_warned=args.ignore_warned
+            )
             print_report(report)
 
 

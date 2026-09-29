@@ -56,9 +56,12 @@ python state_manager.py   # legt ein Test-Muster an und setzt es auf CONFIRMED
 python main.py --once     # ein Durchlauf
 python main.py            # Loop, Strg+C beendet
 python backtest.py --symbol BTC/USDT --timeframe 1h --limit 1000
+python backtest.py --ignore-warned
 ```
 
 Der Backtest zieht je Trade 0,15 % Gebühr ab und zeigt danach die Ergebnisse je Muster.
+`--ignore-warned` lässt Coin/Muster-Kombinationen aus `COIN_PATTERN_RULES` weg.
+Dieselben Kombinationen bekommen im Telegram-Alert einen Fehlausbruch-Hinweis.
 
 Ohne Token läuft der Bot trotzdem: Alerts erscheinen dann nur in der Konsole.
 

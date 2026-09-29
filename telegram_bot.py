@@ -26,11 +26,18 @@ def format_alert(
     timeframe: str,
 ) -> str:
     label = STATUS_MARK.get(status, status)
-    return (
-        f"<b>{pattern}</b> · {label}\n"
-        f"<b>{symbol}</b> · {timeframe}\n"
-        f"{detail}"
-    )
+    lines = [
+        f"<b>{pattern}</b> · {label}",
+        f"<b>{symbol}</b> · {timeframe}",
+        detail,
+    ]
+    if config.has_pattern_warning(symbol, pattern):
+        lines.insert(
+            0,
+            "<b>⚠️ HINWEIS: Historisch erhöhtes Fehlausbruchs-Risiko "
+            f"bei {pattern} auf {symbol}!</b>",
+        )
+    return "\n".join(lines)
 
 
 def send_message(text: str) -> bool:

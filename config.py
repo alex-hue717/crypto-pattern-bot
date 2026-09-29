@@ -80,4 +80,24 @@ MACRO_MIN_SWING_LOWS = 2
 VOLUME_SMA_BARS = 20
 VOLUME_BREAKOUT_FACTOR = 1.3
 
+# Coin-spezifische Hinweise. "warnings" markiert Muster mit historisch vielen Fehlausbrüchen.
+COIN_PATTERN_RULES = {
+    "BTC/USDT": {
+        "warnings": ["Range Breakout"],  # Oder komplett deaktivieren
+    },
+    "ETH/USDT": {
+        "warnings": ["Range Breakout"],
+    },
+    "SOL/USDT": {
+        "warnings": ["Macro Range"],
+    },
+}
+
+
+def has_pattern_warning(symbol: str, pattern_name: str) -> bool:
+    """True, wenn dieses Muster auf dem Coin als riskant markiert ist."""
+    warnings = COIN_PATTERN_RULES.get(symbol, {}).get("warnings", [])
+    return pattern_name in warnings
+
+
 DB_PATH = Path(__file__).resolve().parent / "patterns.db"
