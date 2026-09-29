@@ -14,6 +14,9 @@ class PatternSignal:
     status: str
     fingerprint: str
     detail: str
+    neckline_price: float | None = None
+    stop_loss_price: float | None = None
+    target_price: float | None = None
 
 
 class BasePattern(ABC):

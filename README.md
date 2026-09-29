@@ -16,7 +16,7 @@ crypto-pattern-bot/
 ├── requirements.txt
 ├── config.py            # Tokens aus .env, Coins, Timeframes
 ├── data_fetcher.py      # CryptoDataFetcher.get_ohlcv -> DataFrame
-├── state_manager.py     # FORMING -> CONFIRMED / FAILED (SQLite, lokal)
+├── state_manager.py     # FORMING -> CONFIRMED / FAILED (SQLite, patterns.db)
 ├── telegram_bot.py      # Formatierte Telegram-Nachrichten
 ├── main.py               # Haupt-Loop
 └── patterns/
@@ -25,7 +25,7 @@ crypto-pattern-bot/
     └── double_bottom.py  # Erstes Muster
 ```
 
-`data/state.db` entsteht beim ersten Lauf und ist per `.gitignore` ausgeschlossen.
+`patterns.db` entsteht beim ersten Lauf und ist per `.gitignore` ausgeschlossen.
 
 ## Start
 
@@ -45,8 +45,9 @@ In `.env` eintragen:
 Coins und Timeframes stehen in `config.py` (`SYMBOLS`, `TIMEFRAMES`).
 
 ```bash
-python main.py --once   # ein Durchlauf
-python main.py          # Loop, Strg+C beendet
+python state_manager.py   # legt ein Test-Muster an und setzt es auf CONFIRMED
+python main.py --once     # ein Durchlauf
+python main.py            # Loop, Strg+C beendet
 ```
 
 Ohne Token läuft der Bot trotzdem: Alerts erscheinen dann nur in der Konsole.

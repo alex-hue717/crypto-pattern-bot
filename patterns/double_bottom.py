@@ -41,9 +41,11 @@ class DoubleBottom(BasePattern):
         if not between:
             return None
 
-        neckline = max(candle[2] for candle in between)
+        neckline = float(max(candle[2] for candle in between))
         last_close = float(closed[-1][4])
         deeper = min(first_low, second_low)
+        stop_loss = float(deeper)
+        target = neckline + (neckline - stop_loss)
         fingerprint = f"{int(closed[first_idx][0])}:{int(closed[second_idx][0])}"
 
         if last_close >= neckline * (1 + config.NECKLINE_BREAK_BUFFER):
@@ -66,7 +68,14 @@ class DoubleBottom(BasePattern):
                 f"Neckline {neckline:.4f}, Schluss {last_close:.4f}."
             )
 
-        return PatternSignal(status=status, fingerprint=fingerprint, detail=detail)
+        return PatternSignal(
+            status=status,
+            fingerprint=fingerprint,
+            detail=detail,
+            neckline_price=neckline,
+            stop_loss_price=stop_loss,
+            target_price=target,
+        )
 
 
 def _swing_lows(candles: list[Candle], lookback: int) -> list[tuple[int, float]]:

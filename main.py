@@ -43,18 +43,32 @@ def candles_from_frame(frame: pd.DataFrame) -> list[list[float]]:
     return candles
 
 
-def should_notify(
-    previous_status: str | None,
-    previous_fingerprint: str | None,
-    status: str,
-    fingerprint: str,
-) -> bool:
-    if previous_status is None or previous_status != status:
-        return True
-    return previous_fingerprint != fingerprint and status == "FORMING"
+def _matching_active(
+    state: StateManager,
+    symbol: str,
+    timeframe: str,
+    pattern_name: str,
+) -> list[dict]:
+    return [
+        row
+        for row in state.get_active_patterns()
+        if row["symbol"] == symbol
+        and row["timeframe"] == timeframe
+        and row["pattern_name"] == pattern_name
+    ]
+
+
+def _notify(symbol: str, pattern_name: str, status: str, detail: str, timeframe: str) -> None:
+    text = format_alert(symbol, pattern_name, status, detail, timeframe)
+    log.info("Alert:\n%s", text)
+    send_message(text)
 
 
 def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
+    removed = state.cleanup_old_records()
+    if removed:
+        log.info("%s alte Muster entfernt", removed)
+
     for symbol in config.SYMBOLS:
         for timeframe in config.TIMEFRAMES:
             try:
@@ -66,33 +80,50 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
             candles = candles_from_frame(frame)
             for pattern in PATTERNS:
                 signal = pattern.detect(candles)
-                pattern_key = f"{pattern.name} {timeframe}"
                 if signal is None:
-                    log.info("%s %s: kein Setup", symbol, pattern_key)
+                    log.info("%s %s %s: kein Setup", symbol, timeframe, pattern.name)
+                    continue
+                if (
+                    signal.neckline_price is None
+                    or signal.stop_loss_price is None
+                    or signal.target_price is None
+                ):
+                    log.info("%s %s ohne Preisniveaus, übersprungen", symbol, pattern.name)
                     continue
 
-                previous, _current = state.transition(
-                    symbol=symbol,
-                    pattern=pattern_key,
-                    status=signal.status,
-                    fingerprint=signal.fingerprint,
-                    detail=signal.detail,
-                )
-                prev_status = previous.status if previous else None
-                prev_fp = previous.fingerprint if previous else None
-                if not should_notify(prev_status, prev_fp, signal.status, signal.fingerprint):
-                    log.info("%s %s bleibt %s", symbol, pattern_key, signal.status)
+                active = _matching_active(state, symbol, timeframe, pattern.name)
+                if signal.status == "FORMING":
+                    if active or state.has_active_forming_pattern(
+                        symbol, timeframe, pattern.name
+                    ):
+                        log.info("%s %s %s bleibt FORMING", symbol, timeframe, pattern.name)
+                        continue
+                    pattern_id = state.add_pattern(
+                        symbol,
+                        timeframe,
+                        pattern.name,
+                        signal.neckline_price,
+                        signal.stop_loss_price,
+                        signal.target_price,
+                    )
+                    log.info("FORMING gespeichert: id=%s", pattern_id)
+                    _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
                     continue
 
-                text = format_alert(
-                    symbol,
-                    pattern.name,
-                    signal.status,
-                    signal.detail,
-                    timeframe,
-                )
-                log.info("Alert:\n%s", text)
-                send_message(text)
+                if not active:
+                    log.info(
+                        "%s %s %s ist %s, kein offenes FORMING",
+                        symbol,
+                        timeframe,
+                        pattern.name,
+                        signal.status,
+                    )
+                    continue
+
+                for row in active:
+                    if state.update_status(row["id"], signal.status):
+                        log.info("Muster %s -> %s", row["id"], signal.status)
+                        _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
 
 
 def main() -> None:
@@ -121,8 +152,6 @@ def main() -> None:
             time.sleep(config.POLL_INTERVAL_SECONDS)
     except KeyboardInterrupt:
         log.info("Bot gestoppt.")
-    finally:
-        state.close()
 
 
 if __name__ == "__main__":

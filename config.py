@@ -53,4 +53,4 @@ NECKLINE_BREAK_BUFFER = 0.002
 FAILED_BREAK_BUFFER = 0.005
 SWING_LOOKBACK = 3
 
-DB_PATH = Path(__file__).resolve().parent / "data" / "state.db"
+DB_PATH = Path(__file__).resolve().parent / "patterns.db"
