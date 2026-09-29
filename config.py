@@ -35,6 +35,14 @@ SYMBOLS = [
     "BTC/USDT",
     "ETH/USDT",
     "SOL/USDT",
+    "AVAX/USDT",
+    "LINK/USDT",
+    "NEAR/USDT",
+    "FET/USDT",
+    "PEPE/USDT",
+    "BOME/USDT",
+    "ETHFI/USDT",
+    "SEI/USDT",
 ]
 
 TIMEFRAMES = [
