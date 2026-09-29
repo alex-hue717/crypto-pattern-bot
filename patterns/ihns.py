@@ -15,7 +15,7 @@ class InverseHeadAndShoulders(BasePattern):
 
     name = "Inverse Head and Shoulders"
 
-    def detect(self, candles: list[list[float]]) -> PatternSignal | None:
+    def detect(self, candles: list[list[float]], timeframe: str | None = None) -> PatternSignal | None:
         closed = candles[:-1] if len(candles) > 2 else list(candles)
         lookback = config.SWING_LOOKBACK
         needed = config.IHNS_MAX_BARS * 2 + lookback * 2

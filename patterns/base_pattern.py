@@ -23,5 +23,5 @@ class BasePattern(ABC):
     name: str
 
     @abstractmethod
-    def detect(self, candles: list[Candle]) -> PatternSignal | None:
+    def detect(self, candles: list[Candle], timeframe: str | None = None) -> PatternSignal | None:
         """None, wenn gerade kein aktives Muster vorliegt."""

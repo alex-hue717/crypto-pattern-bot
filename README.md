@@ -5,7 +5,9 @@ Kopf-Schulter, einen engen Range-Ausbruch und eine Makro-Zone prüft. Der Status
 `FORMING` → `CONFIRMED` / `FAILED` und wird per Telegram gemeldet.
 
 Marktdaten kommen über [CCXT](https://github.com/ccxt/ccxt) (standardmäßig Binance, nur lesen)
-als Pandas-DataFrame. Es werden keine Orders gesendet.
+als Pandas-DataFrame. Es werden keine Orders gesendet. Range- und Makro-Ausbrüche
+zählen erst als bestätigt, wenn das Volumen mindestens das 1,3-fache des
+20-Kerzen-Schnitts erreicht. Schwache Makro-Tests unter 1h werden ignoriert.
 
 ## Ordnerstruktur
 

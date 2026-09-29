@@ -16,7 +16,7 @@ class RangeBreakout(BasePattern):
 
     name = "Range Breakout"
 
-    def detect(self, candles: list[list[float]]) -> PatternSignal | None:
+    def detect(self, candles: list[list[float]], timeframe: str | None = None) -> PatternSignal | None:
         closed = candles[:-1] if len(candles) > 2 else list(candles)
         range_bars = config.RANGE_BARS
         lookback = config.RANGE_FAIL_LOOKBACK
@@ -46,6 +46,7 @@ class RangeBreakout(BasePattern):
         upper_edge = range_low + height * (1 - config.RANGE_UPPER_FRACTION)
 
         last_close = float(recent[-1][4])
+        volume_ok, current_volume, average_volume = _volume_confirms(closed, len(closed) - 1)
         broke_out = any(float(candle[4]) >= breakout for candle in recent) or any(
             float(candle[2]) > neckline for candle in recent
         )
@@ -54,11 +55,19 @@ class RangeBreakout(BasePattern):
             f"{range_low:.6f}:{range_high:.6f}"
         )
 
-        if last_close >= breakout:
+        if last_close >= breakout and volume_ok:
             status = "CONFIRMED"
             detail = (
                 f"Range-Ausbruch bei {last_close:.4f} über {neckline:.4f}. "
+                f"Volumen {current_volume:.0f} gegen Schnitt {average_volume:.0f}. "
                 f"Spanne {span_percent:.2f} % ({range_low:.4f}–{range_high:.4f})."
+            )
+        elif last_close >= breakout:
+            status = "FORMING"
+            detail = (
+                f"Kurs über der Range bei {last_close:.4f}, Volumen zu schwach "
+                f"({current_volume:.0f} < {average_volume * config.VOLUME_BREAKOUT_FACTOR:.0f}). "
+                f"Neckline {neckline:.4f}."
             )
         elif broke_out and last_close <= stop_loss:
             status = "FAILED"
@@ -83,3 +92,16 @@ class RangeBreakout(BasePattern):
             stop_loss_price=float(stop_loss),
             target_price=float(target),
         )
+
+
+def _volume_confirms(candles: list[Candle], signal_index: int) -> tuple[bool, float, float]:
+    """True, wenn die Ausbruchskerze mindestens das 1,3-fache des 20er-Volumenschnitts hat."""
+    bars = config.VOLUME_SMA_BARS
+    if signal_index < bars:
+        return False, 0.0, 0.0
+    current = float(candles[signal_index][5])
+    sample = [float(candles[index][5]) for index in range(signal_index - bars, signal_index)]
+    average = sum(sample) / bars
+    if average <= 0:
+        return False, current, average
+    return current >= average * config.VOLUME_BREAKOUT_FACTOR, current, average

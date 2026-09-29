@@ -72,5 +72,12 @@ MACRO_LOW_PERCENTILE = 5
 MACRO_PROXIMITY = 0.015
 MACRO_BREAKOUT = 0.003
 MACRO_STOP_INSIDE = 0.02
+MACRO_MIN_TIMEFRAME_MINUTES = 60
+MACRO_MIN_SWING_HIGHS = 2
+MACRO_MIN_SWING_LOWS = 2
+
+# Ausbruch nur mit überdurchschnittlichem Volumen bestätigen.
+VOLUME_SMA_BARS = 20
+VOLUME_BREAKOUT_FACTOR = 1.3
 
 DB_PATH = Path(__file__).resolve().parent / "patterns.db"

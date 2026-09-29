@@ -9,7 +9,7 @@ from patterns.base_pattern import BasePattern, Candle, PatternSignal
 class DoubleBottom(BasePattern):
     name = "Double Bottom"
 
-    def detect(self, candles: list[Candle]) -> PatternSignal | None:
+    def detect(self, candles: list[Candle], timeframe: str | None = None) -> PatternSignal | None:
         closed = candles[:-1] if len(candles) > 2 else list(candles)
         needed = config.MAX_BARS_BETWEEN_LOWS + config.SWING_LOOKBACK * 2
         if len(closed) < needed:

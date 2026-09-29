@@ -168,7 +168,7 @@ def run_backtest(
         view = _as_closed(candles, index)
         opened = False
         for pattern in patterns:
-            signal = pattern.detect(view)
+            signal = pattern.detect(view, timeframe)
             if signal is None or signal.status != "CONFIRMED":
                 continue
             if signal.stop_loss_price is None or signal.target_price is None:
