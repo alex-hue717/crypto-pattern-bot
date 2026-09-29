@@ -4,6 +4,7 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+bot.log
 data/
 .venv/
 venv/

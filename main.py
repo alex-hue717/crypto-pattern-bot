@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import time
+from pathlib import Path
 
 import pandas as pd
 
@@ -17,11 +18,29 @@ from patterns.macro_range import MacroRange
 from state_manager import StateManager
 from telegram_bot import format_alert, send_message
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
 log = logging.getLogger("crypto-pattern-bot")
+
+
+def setup_logging() -> None:
+    """Schreibt jedes Log in die Konsole und nach bot.log."""
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    log_path = str(Path(__file__).resolve().parent / "bot.log")
+    has_console = any(type(handler) is logging.StreamHandler for handler in root.handlers)
+    has_file = any(getattr(handler, "baseFilename", "") == log_path for handler in root.handlers)
+    if not has_console:
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        root.addHandler(console)
+    if not has_file:
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        root.addHandler(file_handler)
+
 
 PATTERNS = [DoubleBottom(), InverseHeadAndShoulders(), RangeBreakout(), MacroRange()]
 
@@ -63,11 +82,15 @@ def _matching_active(
 
 def _notify(symbol: str, pattern_name: str, status: str, detail: str, timeframe: str) -> None:
     text = format_alert(symbol, pattern_name, status, detail, timeframe)
-    log.info("Alert:\n%s", text)
-    send_message(text)
+    delivered = send_message(text)
+    if delivered:
+        log.info("Telegram gesendet: %s %s %s %s", symbol, timeframe, pattern_name, status)
+    else:
+        log.info("Telegram nicht zugestellt: %s %s %s %s", symbol, timeframe, pattern_name, status)
 
 
 def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
+    log.info("Scan gestartet")
     removed = state.cleanup_old_records()
     if removed:
         log.info("%s alte Muster entfernt", removed)
@@ -86,6 +109,7 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
                 if signal is None:
                     log.info("%s %s %s: kein Setup", symbol, timeframe, pattern.name)
                     continue
+                log.info("Signal %s: %s %s %s", signal.status, symbol, timeframe, pattern.name)
                 if (
                     signal.neckline_price is None
                     or signal.stop_loss_price is None
@@ -129,7 +153,20 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
                         _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
 
 
+def run_forever(fetcher: CryptoDataFetcher, state: StateManager, sleep=time.sleep) -> None:
+    """Scannt dauerhaft. Ein Fehler beendet den Bot nicht."""
+    while True:
+        try:
+            run_once(fetcher, state)
+        except Exception as exc:
+            log.error("Scan fehlgeschlagen: %s", exc)
+            sleep(60)
+            continue
+        sleep(config.POLL_INTERVAL_SECONDS)
+
+
 def main() -> None:
+    setup_logging()
     parser = argparse.ArgumentParser(description="Crypto Pattern Bot")
     parser.add_argument(
         "--once",
@@ -150,9 +187,7 @@ def main() -> None:
         if args.once:
             run_once(fetcher, state)
             return
-        while True:
-            run_once(fetcher, state)
-            time.sleep(config.POLL_INTERVAL_SECONDS)
+        run_forever(fetcher, state)
     except KeyboardInterrupt:
         log.info("Bot gestoppt.")
 

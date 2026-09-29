@@ -63,6 +63,8 @@ Der Backtest zieht je Trade 0,15 % Gebühr ab und zeigt danach die Ergebnisse je
 `--ignore-warned` lässt Coin/Muster-Kombinationen aus `COIN_PATTERN_RULES` weg.
 Dieselben Kombinationen bekommen im Telegram-Alert einen Fehlausbruch-Hinweis.
 
+Im Dauerbetrieb schreibt der Bot nach `bot.log` und in die Konsole. Ein Fehler beendet ihn nicht: er wartet 60 Sekunden und scannt weiter.
+
 Ohne Token läuft der Bot trotzdem: Alerts erscheinen dann nur in der Konsole.
 
 ## Neues Muster
