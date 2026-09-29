@@ -45,7 +45,13 @@ def rejection_reason(
     elif pattern_name in TREND_PATTERNS or pattern_name not in REVERSAL_PATTERNS:
         if not close_above_ema(closed, timeframe):
             return "unter EMA 200"
-    if not risk_reward_ok(entry, float(stop), float(target)):
+    risk = entry - float(stop)
+    if risk <= 0:
+        return "CRV unter 1.5"
+    # Das Positionsmanagement zielt auf 2R. Das gemessene Musterziel eines
+    # Double Bottom liegt am Ausbruch oft nur bei 1R und darf den Trade nicht verwerfen.
+    managed_target = entry + config.TAKE_PROFIT_2_R * risk
+    if not risk_reward_ok(entry, float(stop), managed_target):
         return "CRV unter 1.5"
     if not volume_confirms(closed, len(closed) - 1)[0]:
         return "Volumen zu schwach"

@@ -19,24 +19,11 @@ class DoubleBottom(BasePattern):
         if len(swings) < 2:
             return None
 
-        second_idx, second_low = swings[-1]
-        first: tuple[int, float] | None = None
-        for idx, low in reversed(swings[:-1]):
-            gap = second_idx - idx
-            if gap < config.MIN_BARS_BETWEEN_LOWS:
-                continue
-            if gap > config.MAX_BARS_BETWEEN_LOWS:
-                break
-            mid = (low + second_low) / 2
-            if mid <= 0:
-                continue
-            if abs(low - second_low) / mid <= config.DOUBLE_BOTTOM_TOLERANCE:
-                first = (idx, low)
-                break
-        if first is None:
+        match = _match_lows(closed, swings)
+        if match is None:
             return None
 
-        first_idx, first_low = first
+        first_idx, first_low, second_idx, second_low = match
         between = closed[first_idx + 1 : second_idx]
         if not between:
             return None
@@ -76,6 +63,45 @@ class DoubleBottom(BasePattern):
             stop_loss_price=stop_loss,
             target_price=target,
         )
+
+
+def _match_lows(
+    candles: list[Candle],
+    swings: list[tuple[int, float]],
+) -> tuple[int, float, int, float] | None:
+    """Sucht ein Tiefpaar. Ein bereits gebrochener Boden schlägt ein neueres FORMING."""
+    found: tuple[int, float, int, float] | None = None
+    last_index = len(candles) - 1
+    for second_pos in range(len(swings) - 1, 0, -1):
+        second_idx, second_low = swings[second_pos]
+        if last_index - second_idx > config.MAX_BARS_BETWEEN_LOWS:
+            break
+        first: tuple[int, float] | None = None
+        for idx, low in reversed(swings[:second_pos]):
+            gap = second_idx - idx
+            if gap < config.MIN_BARS_BETWEEN_LOWS:
+                continue
+            if gap > config.MAX_BARS_BETWEEN_LOWS:
+                break
+            mid = (low + second_low) / 2
+            if mid <= 0:
+                continue
+            if abs(low - second_low) / mid <= config.DOUBLE_BOTTOM_TOLERANCE:
+                first = (idx, low)
+                break
+        if first is None:
+            continue
+        pair = (first[0], first[1], second_idx, second_low)
+        between = candles[first[0] + 1 : second_idx]
+        if not between:
+            continue
+        neckline = max(float(candle[2]) for candle in between)
+        last_close = float(candles[-1][4])
+        if last_close >= neckline * (1 + config.NECKLINE_BREAK_BUFFER):
+            return pair
+        if found is None:
+            found = pair
+    return found
 
 
 def _swing_lows(candles: list[Candle], lookback: int) -> list[tuple[int, float]]:

@@ -132,27 +132,49 @@ def _as_closed(candles: list[list[float]], index: int) -> list[list[float]]:
 def _manage_trade(
     candles: list[list[float]],
     entry_index: int,
+    entry: float,
     stop: float,
-    target: float,
 ) -> tuple[float, str, int]:
-    """Folgt dem Trade, bis Take-Profit oder Stop-Loss fällt.
+    """Schließt 50 % bei 1R, zieht den Stop auf den Einstieg und den Rest bei 2R.
 
-    Liegen beide in derselben Kerze, zählt der Stop. Ein Trade ohne Treffer
-    wird zum letzten verfügbaren Schluss geschlossen.
+    Liegen Stop und Ziel in derselben Kerze, zählt der Stop. Ein offener Rest
+    wird zum letzten Schluss geschlossen.
     """
+    risk = entry - stop
+    tp1 = entry + config.TAKE_PROFIT_1_R * risk
+    tp2 = entry + config.TAKE_PROFIT_2_R * risk
+    first_weight = config.PARTIAL_CLOSE
+    runner_weight = 1 - first_weight
+    first_exit: float | None = None
+    runner_stop = stop
+
+    def blended(second: float) -> float:
+        assert first_exit is not None
+        return first_weight * first_exit + runner_weight * second
+
     for index in range(entry_index + 1, len(candles)):
         high = float(candles[index][2])
         low = float(candles[index][3])
-        hit_stop = low <= stop
-        hit_target = high >= target
-        if hit_stop and hit_target:
-            return stop, "SL", index
-        if hit_stop:
-            return stop, "SL", index
-        if hit_target:
-            return target, "TP", index
+        if first_exit is None:
+            if low <= stop:
+                return stop, "SL", index
+            if high >= tp1:
+                first_exit = tp1
+                runner_stop = entry
+                if low <= runner_stop:
+                    return blended(entry), "TP1+BE", index
+                if high >= tp2:
+                    return blended(tp2), "TP2", index
+            continue
+        if low <= runner_stop:
+            return blended(entry), "TP1+BE", index
+        if high >= tp2:
+            return blended(tp2), "TP2", index
     last = len(candles) - 1
-    return float(candles[last][4]), "Schluss", last
+    close = float(candles[last][4])
+    if first_exit is None:
+        return close, "Schluss", last
+    return blended(close), "TP1+Schluss", last
 
 
 def run_backtest(
@@ -187,7 +209,7 @@ def run_backtest(
             if not strategy.signal_allowed(view, timeframe, stop, target, pattern.name):
                 continue
             exit_price, reason, exit_index = _manage_trade(
-                candles, index, stop, target
+                candles, index, entry, stop
             )
             trades.append(
                 Trade(

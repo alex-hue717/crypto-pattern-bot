@@ -62,7 +62,7 @@ python backtest.py --ignore-warned
 Der Backtest zieht je Trade 0,15 % Gebühr ab und zeigt danach die Ergebnisse je Muster.
 `--ignore-warned` lässt zusätzlich als Hinweis markierte Kombinationen weg.
 Muster aus `disabled_patterns` werden im Live-Bot und im Backtest immer übersprungen.
-Ausbrüche brauchen einen Schluss über dem EMA 200. Double Bottom und iH&S brauchen einen Schluss über dem EMA 20 oder einen RSI(14) über 45. Für alle Muster gelten ein Chance-Risiko von mindestens 1,5 und ein Volumen über dem 1,2-fachen des 20er-Schnitts.
+Ausbrüche brauchen einen Schluss über dem EMA 200. Double Bottom und iH&S brauchen einen Schluss über dem EMA 20 oder einen RSI(14) über 45. Die beiden Double-Bottom-Tiefs dürfen bis zu 1 % auseinanderliegen. Für alle Muster gelten ein Volumen über dem 1,2-fachen des 20er-Schnitts und ein geplanter Gewinn von 2R. Der Backtest verkauft 50 % bei 1R, setzt den Stop auf den Einstieg und verkauft den Rest bei 2R.
 
 Im Dauerbetrieb schreibt der Bot nach `bot.log` und in die Konsole. Ein Fehler beendet ihn nicht: er wartet 60 Sekunden und scannt weiter.
 
