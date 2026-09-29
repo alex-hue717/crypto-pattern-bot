@@ -53,4 +53,10 @@ NECKLINE_BREAK_BUFFER = 0.002
 FAILED_BREAK_BUFFER = 0.005
 SWING_LOOKBACK = 3
 
+# Invertierte Kopf-Schulter (iH&S).
+IHNS_SHOULDER_TOLERANCE = 0.02
+IHNS_MIN_BARS = 5
+IHNS_MAX_BARS = 30
+IHNS_MIN_HEAD_DEPTH = 0.015
+
 DB_PATH = Path(__file__).resolve().parent / "patterns.db"
