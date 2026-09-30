@@ -24,6 +24,7 @@ def format_alert(
     status: str,
     detail: str,
     timeframe: str,
+    market_header: str | None = None,
 ) -> str:
     label = STATUS_MARK.get(status, status)
     lines = [
@@ -37,6 +38,8 @@ def format_alert(
             "<b>⚠️ HINWEIS: Historisch erhöhtes Fehlausbruchs-Risiko "
             f"bei {pattern} auf {symbol}!</b>",
         )
+    if market_header:
+        lines.insert(0, market_header)
     return "\n".join(lines)
 
 

@@ -62,7 +62,7 @@ python backtest.py --ignore-warned
 Der Backtest zieht je Trade 0,15 % Gebühr ab und zeigt danach die Ergebnisse je Muster.
 `--ignore-warned` lässt zusätzlich als Hinweis markierte Kombinationen weg.
 Muster aus `disabled_patterns` werden im Live-Bot und im Backtest immer übersprungen.
-Der Double Bottom ist auf 15m und 1h aus. Er läuft nur auf 4h und nur für ETH, SOL, LINK, NEAR und AVAX (`SOL/USDT` und `SOL-USD` gelten beide). Für alle anderen Coins wird er nicht geladen und nicht geprüft. Zwischen den Tiefs müssen mindestens 15 Kerzen liegen. Gekauft wird beim Bruch der Nackenlinie.
+Der Double Bottom ist auf 15m und 1h aus. Er läuft nur auf 4h und nur für ETH, SOL, LINK, NEAR und AVAX. Die BTC-Ampel steht als Kopfzeile im Log und in jeder Telegram-Nachricht. Sie warnt nur und hält keinen Trade und kein Signal an. Grün heißt Kurs über EMA 20, 50 und 200 ohne 12h-Dump, Gelb ist die Frühwarnung darüber, Rot ist ein Kurs unter der EMA 200 oder mehr als 3 % Verlust in 12 Stunden.
 
 Im Dauerbetrieb schreibt der Bot nach `bot.log` und in die Konsole. Ein Fehler beendet ihn nicht: er wartet 60 Sekunden und scannt weiter.
 

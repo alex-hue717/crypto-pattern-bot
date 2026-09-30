@@ -11,6 +11,7 @@ import pandas as pd
 
 import config
 import strategy
+from btc_traffic_light import get_btc_traffic_light
 from data_fetcher import CryptoDataFetcher
 from patterns.double_bottom import DoubleBottom
 from patterns.ihns import InverseHeadAndShoulders
@@ -81,8 +82,15 @@ def _matching_active(
     ]
 
 
-def _notify(symbol: str, pattern_name: str, status: str, detail: str, timeframe: str) -> None:
-    text = format_alert(symbol, pattern_name, status, detail, timeframe)
+def _notify(
+    symbol: str,
+    pattern_name: str,
+    status: str,
+    detail: str,
+    timeframe: str,
+    market_header: str = "",
+) -> None:
+    text = format_alert(symbol, pattern_name, status, detail, timeframe, market_header or None)
     delivered = send_message(text)
     if delivered:
         log.info("Telegram gesendet: %s %s %s %s", symbol, timeframe, pattern_name, status)
@@ -96,6 +104,7 @@ def _scan_patterns(
     timeframe: str,
     candles: list[list[float]],
     patterns: list,
+    market_header: str = "",
 ) -> None:
     for pattern in patterns:
         if pattern.name == "Double Bottom" and not config.double_bottom_allowed(symbol, timeframe):
@@ -106,7 +115,7 @@ def _scan_patterns(
         if signal is None:
             log.info("%s %s %s: kein Setup", symbol, timeframe, pattern.name)
             continue
-        log.info("Signal %s: %s %s %s", signal.status, symbol, timeframe, pattern.name)
+        log.info("Signal %s: %s %s %s\n%s", signal.status, symbol, timeframe, pattern.name, market_header)
         if (
             signal.neckline_price is None
             or signal.stop_loss_price is None
@@ -147,7 +156,7 @@ def _scan_patterns(
                 signal.target_price,
             )
             log.info("FORMING gespeichert: id=%s", pattern_id)
-            _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
+            _notify(symbol, pattern.name, signal.status, signal.detail, timeframe, market_header)
             continue
 
         if not active:
@@ -163,7 +172,7 @@ def _scan_patterns(
         for row in active:
             if state.update_status(row["id"], signal.status):
                 log.info("Muster %s -> %s", row["id"], signal.status)
-                _notify(symbol, pattern.name, signal.status, signal.detail, timeframe)
+                _notify(symbol, pattern.name, signal.status, signal.detail, timeframe, market_header)
 
 
 def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
@@ -171,6 +180,10 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
     removed = state.cleanup_old_records()
     if removed:
         log.info("%s alte Muster entfernt", removed)
+
+    light = get_btc_traffic_light()
+    market_header = str(light["text"])
+    log.info("%s", market_header)
 
     regular = [pattern for pattern in PATTERNS if pattern.name != "Double Bottom"]
     double_bottom = [pattern for pattern in PATTERNS if pattern.name == "Double Bottom"]
@@ -183,7 +196,7 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
             except Exception:
                 log.exception("Marktdaten für %s %s fehlgeschlagen", symbol, timeframe)
                 continue
-            _scan_patterns(state, symbol, timeframe, candles_from_frame(frame), regular)
+            _scan_patterns(state, symbol, timeframe, candles_from_frame(frame), regular, market_header)
 
         if not config.double_bottom_allowed(symbol, higher_timeframe):
             continue
@@ -202,6 +215,7 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
             higher_timeframe,
             candles_from_frame(frame),
             double_bottom,
+            market_header,
         )
 
 
