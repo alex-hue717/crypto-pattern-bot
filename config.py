@@ -53,9 +53,9 @@ TIMEFRAMES = [
 CANDLE_LIMIT = 850
 POLL_INTERVAL_SECONDS = 60
 
-# Double Bottom nur auf der höheren Zeiteinheit, nicht auf 15m oder 1h.
-# 15 Kerzen auf 4h sind etwa 2,5 Tage Abstand zwischen den Tiefs.
+# Double Bottom nur auf 4h und nur für diese Basen, egal ob /USDT oder -USD.
 DOUBLE_BOTTOM_TIMEFRAME = "4h"
+DOUBLE_BOTTOM_WHITELIST = ("ETH", "SOL", "LINK", "NEAR", "AVAX")
 DOUBLE_BOTTOM_MIN_BARS = 15
 DOUBLE_BOTTOM_TOLERANCE = 0.01
 MIN_BARS_BETWEEN_LOWS = 5
@@ -114,6 +114,14 @@ COIN_PATTERN_RULES = {
     "ETHFI/USDT": {"disabled_patterns": []},
     "SEI/USDT": {"disabled_patterns": []},
 }
+
+
+def double_bottom_allowed(symbol: str, timeframe: str) -> bool:
+    """True nur für ETH, SOL, LINK, NEAR und AVAX auf dem 4h-Chart."""
+    if timeframe.strip().lower() != DOUBLE_BOTTOM_TIMEFRAME:
+        return False
+    base = symbol.strip().upper().replace("-", "/").split("/", 1)[0]
+    return base in DOUBLE_BOTTOM_WHITELIST
 
 
 def is_pattern_disabled(symbol: str, pattern_name: str) -> bool:

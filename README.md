@@ -62,7 +62,7 @@ python backtest.py --ignore-warned
 Der Backtest zieht je Trade 0,15 % Gebühr ab und zeigt danach die Ergebnisse je Muster.
 `--ignore-warned` lässt zusätzlich als Hinweis markierte Kombinationen weg.
 Muster aus `disabled_patterns` werden im Live-Bot und im Backtest immer übersprungen.
-Der Double Bottom läuft nicht auf 15m oder 1h, sondern nur auf `DOUBLE_BOTTOM_TIMEFRAME` (Standard 4h). Die Kerzen kommen von Yahoo Finance, sonst von der Börse. Zwischen den beiden Tiefs müssen mindestens 15 Kerzen liegen. Gekauft wird beim Bruch der Nackenlinie auf dieser höheren Zeiteinheit. Ausbrüche brauchen einen Schluss über dem EMA 200. Der Backtest verkauft 50 % bei 1R, setzt den Stop auf den Einstieg und den Rest bei 2R.
+Der Double Bottom ist auf 15m und 1h aus. Er läuft nur auf 4h und nur für ETH, SOL, LINK, NEAR und AVAX (`SOL/USDT` und `SOL-USD` gelten beide). Für alle anderen Coins wird er nicht geladen und nicht geprüft. Zwischen den Tiefs müssen mindestens 15 Kerzen liegen. Gekauft wird beim Bruch der Nackenlinie.
 
 Im Dauerbetrieb schreibt der Bot nach `bot.log` und in die Konsole. Ein Fehler beendet ihn nicht: er wartet 60 Sekunden und scannt weiter.
 

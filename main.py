@@ -98,6 +98,8 @@ def _scan_patterns(
     patterns: list,
 ) -> None:
     for pattern in patterns:
+        if pattern.name == "Double Bottom" and not config.double_bottom_allowed(symbol, timeframe):
+            continue
         if config.is_pattern_disabled(symbol, pattern.name):
             continue
         signal = pattern.detect(candles, timeframe)
@@ -183,6 +185,8 @@ def run_once(fetcher: CryptoDataFetcher, state: StateManager) -> None:
                 continue
             _scan_patterns(state, symbol, timeframe, candles_from_frame(frame), regular)
 
+        if not config.double_bottom_allowed(symbol, higher_timeframe):
+            continue
         try:
             frame = fetcher.get_double_bottom_ohlcv(
                 symbol,

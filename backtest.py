@@ -193,6 +193,8 @@ def run_backtest(
         view = _as_closed(candles, index)
         opened = False
         for pattern in patterns:
+            if pattern.name == "Double Bottom" and not config.double_bottom_allowed(symbol, timeframe):
+                continue
             if config.is_pattern_disabled(symbol, pattern.name):
                 continue
             signal = pattern.detect(view, timeframe)
@@ -306,7 +308,7 @@ def main() -> None:
         "Backtest | Börse "
         f"{config.EXCHANGE} | Limit {args.limit} | {warned} | "
         "eine Position, volles Kapital, ohne Hebel, Gebühr 0,15 % je Trade | "
-        f"Double Bottom nur {config.DOUBLE_BOTTOM_TIMEFRAME}"
+        f"Double Bottom nur {config.DOUBLE_BOTTOM_TIMEFRAME} ({', '.join(config.DOUBLE_BOTTOM_WHITELIST)})"
     )
     regular = [pattern for pattern in PATTERNS if pattern.name != "Double Bottom"]
     double_bottom = [pattern for pattern in PATTERNS if pattern.name == "Double Bottom"]
@@ -327,6 +329,8 @@ def main() -> None:
             )
             print_report(report)
         higher = config.DOUBLE_BOTTOM_TIMEFRAME
+        if not config.double_bottom_allowed(symbol, higher):
+            continue
         try:
             candles = load_double_bottom_candles(fetcher, symbol, args.limit)
         except Exception as exc:
